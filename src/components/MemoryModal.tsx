@@ -7,14 +7,9 @@ import {
   Calendar, 
   Users, 
   Tag, 
-  Sparkles, 
-  Clock, 
   Edit3, 
   Save, 
-  CheckCircle2,
-  FileText,
-  Mic,
-  Share2
+  Mic
 } from 'lucide-react';
 import { Memory, CategoryType, ImportanceLevel, ReminderStatus, ReminderPriority } from '../types';
 import { CATEGORIES } from '../utils/constants';

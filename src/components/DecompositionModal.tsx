@@ -7,14 +7,7 @@ import {
   Edit3, 
   Calendar, 
   Users, 
-  Tag, 
-  AlertCircle,
-  Bookmark,
-  Lightbulb,
-  CheckSquare,
-  MessageSquareShare,
-  Coffee,
-  CalendarDays
+  Tag
 } from 'lucide-react';
 import { DecompositionResult, DecomposedItemDraft, CategoryType, ImportanceLevel, Memory } from '../types';
 import { CATEGORIES } from '../utils/constants';

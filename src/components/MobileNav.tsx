@@ -16,7 +16,6 @@ import {
   CalendarDays, 
   Settings,
   Brain,
-  ShieldCheck,
   LogOut
 } from 'lucide-react';
 import { NavigationPage } from './Sidebar';

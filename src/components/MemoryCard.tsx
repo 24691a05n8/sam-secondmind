@@ -8,13 +8,9 @@ import {
   Users, 
   ChevronDown, 
   ChevronUp, 
-  ExternalLink,
-  Sparkles,
   Mic,
   FileText,
-  Image as ImageIcon,
-  CheckCircle2,
-  AlertTriangle
+  Image as ImageIcon
 } from 'lucide-react';
 import { Memory } from '../types';
 import { CATEGORIES } from '../utils/constants';
