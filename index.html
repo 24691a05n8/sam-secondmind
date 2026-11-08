@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SAM – Your Second Mind | AI Personal Memory Platform</title>
+  <meta name="description" content="Capture Anything. Forget Nothing. Your AI-powered personal memory assistant." />
+  
+  <!-- Google Fonts: Inter, Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            sam: {
+              bg: '#080A12',
+              surface: '#101426',
+              card: '#151A2E',
+              cardHover: '#1B223C',
+              border: 'rgba(139, 92, 246, 0.2)',
+              purple: '#8B5CF6',
+              blue: '#4F8CFF',
+              highlight: '#B69CFF',
+              text: '#F8FAFC',
+              muted: '#94A3B8',
+              accent: '#A855F7',
+              cyan: '#38BDF8',
+              emerald: '#10B981',
+              rose: '#F43F5E',
+              amber: '#F59E0B'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            display: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          },
+          boxShadow: {
+            'glow-purple': '0 0 25px -5px rgba(139, 92, 246, 0.4)',
+            'glow-blue': '0 0 25px -5px rgba(79, 140, 255, 0.4)',
+            'glow-cyan': '0 0 25px -5px rgba(56, 189, 248, 0.35)',
+            'glow-lg': '0 0 50px -10px rgba(139, 92, 246, 0.3)'
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- React 18 & ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Babel Standalone for runtime JSX & TS compilation -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      background-color: #080A12;
+      color: #F8FAFC;
+      font-family: 'Inter', system-ui, sans-serif;
+      overflow-x: hidden;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #080A12; }
+    ::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.3); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(139, 92, 246, 0.6); }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    @keyframes pulseGlow {
+      0% { box-shadow: 0 0 15px rgba(139, 92, 246, 0.3); }
+      100% { box-shadow: 0 0 35px rgba(79, 140, 255, 0.6); }
+    }
+    .animate-pulseGlow {
+      animation: pulseGlow 2s ease-in-out infinite alternate;
+    }
+  </style>
+</head>
+<body class="selection:bg-purple-600 selection:text-white">
+  <div id="root"></div>
+
+  <!-- Main Single Page Script -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- ICONS (Embedded SVG Helpers) ---
+    const Icon = ({ name, className = "w-4 h-4", ...props }) => {
+      const icons = {
+        brain: <path d="M12 4.5a2.5 2.5 0 0 0-4.96-.46 2.5 2.5 0 0 0-1.98 3 2.5 2.5 0 0 0-1.32 4.24 3 3 0 0 0 .34 5.58 2.5 2.5 0 0 0 2.96 3.08A2.5 2.5 0 0 0 12 19.5a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 12 4.5zM12 4.5V19.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>,
+        mic: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></g>,
+        square: <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor" stroke="currentColor" strokeWidth="2"/>,
+        pause: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="10" y1="4" x2="10" y2="20"/><line x1="14" y1="4" x2="14" y2="20"/></g>,
+        play: <polygon points="6 3 20 12 6 21 6 3" fill="currentColor"/>,
+        sparkles: <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>,
+        home: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></g>,
+        layers: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></g>,
+        lightbulb: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></g>,
+        bookmark: <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>,
+        message: <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>,
+        users: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></g>,
+        checkSquare: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></g>,
+        bell: <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9m4.3 13a2 2 0 0 0 3.4 0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>,
+        calendar: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></g>,
+        bot: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="12" x="3" y="6" rx="2"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M12 2v4"/><path d="m2 10 1 1"/><path d="m22 10-1 1"/></g>,
+        settings: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></g>,
+        heart: <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" fill={props.fill || "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>,
+        archive: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></g>,
+        trash: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></g>,
+        edit: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></g>,
+        search: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></g>,
+        check: <polyline points="20 6 9 17 4 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>,
+        x: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></g>,
+        arrowRight: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></g>,
+        plus: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></g>,
+        send: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></g>,
+        clock: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></g>,
+        download: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></g>,
+        upload: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></g>,
+        fileText: <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></g>,
+        chevronLeft: <polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>,
+        chevronRight: <polyline points="9 18 15 12 9 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>,
+        shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      };
+      return <svg className={className} viewBox="0 0 24 24" {...props}>{icons[name] || null}</svg>;
+    };
+
+    // --- CATEGORIES METADATA ---
+    const CATEGORIES = {
+      memorable_moments: { id: 'memorable_moments', label: 'Memorable Moments', color: '#F43F5E', bgColor: 'rgba(244, 63, 94, 0.12)', borderColor: 'rgba(244, 63, 94, 0.3)' },
+      things_to_remember: { id: 'things_to_remember', label: 'Things to Remember', color: '#8B5CF6', bgColor: 'rgba(139, 92, 246, 0.12)', borderColor: 'rgba(139, 92, 246, 0.3)' },
+      ideas_thoughts: { id: 'ideas_thoughts', label: 'Ideas & Thoughts', color: '#F59E0B', bgColor: 'rgba(245, 158, 11, 0.12)', borderColor: 'rgba(245, 158, 11, 0.3)' },
+      things_to_tell: { id: 'things_to_tell', label: 'Things to Tell', color: '#38BDF8', bgColor: 'rgba(56, 189, 248, 0.12)', borderColor: 'rgba(56, 189, 248, 0.3)' },
+      people_conversations: { id: 'people_conversations', label: 'People & Conversations', color: '#4F8CFF', bgColor: 'rgba(79, 140, 255, 0.12)', borderColor: 'rgba(79, 140, 255, 0.3)' },
+      important_dates: { id: 'important_dates', label: 'Important Dates', color: '#EC4899', bgColor: 'rgba(236, 72, 153, 0.12)', borderColor: 'rgba(236, 72, 153, 0.3)' },
+      daily_life: { id: 'daily_life', label: 'Daily Life', color: '#10B981', bgColor: 'rgba(16, 185, 129, 0.12)', borderColor: 'rgba(16, 185, 129, 0.3)' },
+      tasks_commitments: { id: 'tasks_commitments', label: 'Tasks & Commitments', color: '#A855F7', bgColor: 'rgba(168, 85, 247, 0.12)', borderColor: 'rgba(168, 85, 247, 0.3)' }
+    };
+
+    // --- INITIAL SEED DATA ---
+    const INITIAL_MEMORIES = [
+      {
+        id: 'mem_1',
+        title: 'Business Opportunity with Rahul',
+        content: 'Rahul pitched an exciting business partnership regarding localized cloud kitchens and high-speed B2B food delivery logistics. He has strong supplier connections with 40+ restaurants.',
+        originalTranscript: 'I met Rahul today. He told me about a business opportunity. I should discuss it with him next Friday. I also got an idea to build a food delivery application.',
+        category: 'people_conversations',
+        createdAt: '2026-11-07T10:15:00Z',
+        tags: ['business', 'partnership', 'rahul', 'startup'],
+        importance: 'high',
+        isFavorite: true,
+        isArchived: false,
+        people: ['Rahul Sharma'],
+        source: 'voice',
+        notes: ['Rahul has connections with 40+ restaurant chains', 'Requires preliminary tech stack evaluation']
+      },
+      {
+        id: 'mem_2',
+        title: 'Discussion with Rahul Next Friday',
+        content: 'Prepare the commercial model breakdown and sync with Rahul to evaluate investment and tech feasibility.',
+        originalTranscript: 'I should discuss it with him next Friday.',
+        category: 'things_to_remember',
+        createdAt: '2026-11-07T10:15:00Z',
+        tags: ['meeting', 'rahul', 'followup'],
+        importance: 'high',
+        isFavorite: false,
+        isArchived: false,
+        people: ['Rahul Sharma'],
+        reminderDate: '2026-11-13T10:00:00Z',
+        reminderStatus: 'pending',
+        reminderPriority: 'urgent',
+        source: 'voice',
+        notes: ['Schedule Zoom or coffee meetup at 10 AM', 'Bring wireframe decks']
+      },
+      {
+        id: 'mem_3',
+        title: 'On-Demand Cloud Kitchen Food Delivery App',
+        content: 'Concept for a dynamic food delivery platform that utilizes micro-fulfillment hubs and AI-driven batch routing to deliver farm-to-table meals in under 15 minutes.',
+        originalTranscript: 'I also got an idea to build a food delivery application.',
+        category: 'ideas_thoughts',
+        createdAt: '2026-11-07T10:15:00Z',
+        tags: ['ideas', 'food-delivery', 'ai', 'logistics'],
+        importance: 'medium',
+        isFavorite: true,
+        isArchived: false,
+        people: [],
+        source: 'voice',
+        notes: ['Core differentiator: Hyper-local micro-kitchens', 'Predictive meal prep based on ordering patterns']
+      },
+      {
+        id: 'mem_4',
+        title: 'Tell Brother About New Project',
+        content: 'Catch up with David to reveal the AI second-mind architecture and get his feedback on the embedded database syncing layer.',
+        category: 'things_to_tell',
+        createdAt: '2026-11-06T18:40:00Z',
+        tags: ['family', 'brother', 'project'],
+        importance: 'medium',
+        isFavorite: false,
+        isArchived: false,
+        people: ['David Rivera (Brother)'],
+        reminderDate: '2026-11-09T18:30:00Z',
+        reminderStatus: 'pending',
+        source: 'text'
+      },
+      {
+        id: 'mem_5',
+        title: 'Summit of Mount Rainier Sunrise',
+        content: 'Reached the summit ridge at 6:15 AM just as the crimson sun pierced through the sea of clouds. Unforgettable sense of peace, clarity and gratitude.',
+        category: 'memorable_moments',
+        createdAt: '2026-10-18T06:15:00Z',
+        tags: ['travel', 'hiking', 'nature', 'life-milestone'],
+        importance: 'high',
+        isFavorite: true,
+        isArchived: false,
+        people: ['Sarah Jenkins'],
+        imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=1000',
+        source: 'image'
+      },
+      {
+        id: 'mem_6',
+        title: "Mom's 60th Birthday Celebration",
+        content: 'Organize surprise dinner party at Villa Bella. Family arriving Friday. Need to order custom botanical cake by Nov 18.',
+        category: 'important_dates',
+        createdAt: '2026-11-01T12:00:00Z',
+        tags: ['family', 'birthday', 'celebration'],
+        importance: 'high',
+        isFavorite: true,
+        isArchived: false,
+        people: ['Mom', 'David Rivera (Brother)'],
+        reminderDate: '2026-11-24T09:00:00Z',
+        reminderStatus: 'pending',
+        source: 'text'
+      },
+      {
+        id: 'mem_7',
+        title: 'Submit Q4 Cloud Infrastructure Budget',
+        content: 'Finalize server and inference cost estimations with finance team and submit to VP Elena Rostova before quarterly board review.',
+        category: 'tasks_commitments',
+        createdAt: '2026-11-04T16:20:00Z',
+        tags: ['work', 'budget', 'commitments'],
+        importance: 'high',
+        isFavorite: false,
+        isArchived: false,
+        people: ['Elena Rostova (Manager)'],
+        reminderDate: '2026-11-10T15:00:00Z',
+        reminderStatus: 'pending',
+        source: 'text'
+      }
+    ];
+
+    const INITIAL_CONTACTS = [
+      {
+        id: 'c_rahul',
+        name: 'Rahul Sharma',
+        relationship: 'Colleague & Co-founder',
+        avatarColor: '#8B5CF6',
+        notes: 'Tech architect and venture collaborator.',
+        thingsToTell: [
+          { id: 'tt_1', message: 'Review food delivery cloud kitchen API and business model next Friday', status: 'pending', reminderDate: '2026-11-13T10:00:00Z' },
+          { id: 'tt_2', message: 'Share updated design prototypes for SAM mobile interface', status: 'pending' }
+        ]
+      },
+      {
+        id: 'c_brother',
+        name: 'David Rivera (Brother)',
+        relationship: 'Family',
+        avatarColor: '#38BDF8',
+        notes: 'Software engineer living in Austin.',
+        thingsToTell: [
+          { id: 'tt_3', message: 'Tell him about my new startup project and get feedback', status: 'pending', reminderDate: '2026-11-09T18:30:00Z' }
+        ]
+      },
+      {
+        id: 'c_manager',
+        name: 'Elena Rostova (Manager)',
+        relationship: 'VP of Engineering',
+        avatarColor: '#10B981',
+        notes: 'Quarterly reviews and cloud compute budgets.',
+        thingsToTell: [
+          { id: 'tt_4', message: 'Present Q4 infrastructure migration report and request GPU budget', status: 'pending', reminderDate: '2026-11-10T15:00:00Z' }
+        ]
+      }
+    ];
+
+    // --- AUDIO CHIME SYNTHESIZER ---
+    const playChime = () => {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioCtx();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.5);
+      } catch (e) {}
+    };
+
+    // --- WAVEFORM CANVAS COMPONENT ---
+    const Waveform = ({ isRecording }) => {
+      const canvasRef = useRef(null);
+
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let animId;
+        const barCount = 32;
+
+        const render = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          const width = canvas.width;
+          const height = canvas.height;
+          const barWidth = (width / barCount) - 3;
+
+          for (let i = 0; i < barCount; i++) {
+            let h = 4;
+            if (isRecording) {
+              const center = 1 - Math.abs(i - barCount / 2) / (barCount / 2);
+              const wave = Math.sin(Date.now() * 0.008 + i * 0.5) * 0.4 + 0.6;
+              h = Math.max(4, center * wave * height * 0.85);
+            }
+            const x = i * (barWidth + 3);
+            const y = (height - h) / 2;
+
+            const grad = ctx.createLinearGradient(0, y, 0, y + h);
+            grad.addColorStop(0, '#4F8CFF');
+            grad.addColorStop(0.6, '#8B5CF6');
+            grad.addColorStop(1, '#B69CFF');
+
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.roundRect(x, y, barWidth, h, 2);
+            ctx.fill();
+          }
+          animId = requestAnimationFrame(render);
+        };
+        render();
+        return () => cancelAnimationFrame(animId);
+      }, [isRecording]);
+
+      return <canvas ref={canvasRef} width={340} height={46} className="w-full max-w-sm h-12 rounded-lg bg-[#101426]/60 border border-purple-500/20" />;
+    };
+
+    // --- MAIN REACT APPLICATION COMPONENT ---
+    function App() {
+      const [currentPage, setCurrentPage] = useState('overview');
+      const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+      const [memories, setMemories] = useState(() => {
+        const saved = localStorage.getItem('sam_memories_v1');
+        return saved ? JSON.parse(saved) : INITIAL_MEMORIES;
+      });
+      const [contacts, setContacts] = useState(() => {
+        const saved = localStorage.getItem('sam_contacts_v1');
+        return saved ? JSON.parse(saved) : INITIAL_CONTACTS;
+      });
+      const [globalSearch, setGlobalSearch] = useState('');
+      const [toasts, setToasts] = useState([]);
+      const [selectedMemory, setSelectedMemory] = useState(null);
+      const [decompositionData, setDecompositionData] = useState(null);
+
+      // Voice capture active state & Web Speech API
+      const [isRecording, setIsRecording] = useState(false);
+      const [isPaused, setIsPaused] = useState(false);
+      const [recordTimer, setRecordTimer] = useState(0);
+      const [captureTab, setCaptureTab] = useState('voice');
+      const [textNoteInput, setTextNoteInput] = useState('');
+      const [liveSpeechTranscript, setLiveSpeechTranscript] = useState('');
+      const speechRecognizerRef = useRef(null);
+
+      // Processing state
+      const [isDecomposing, setIsDecomposing] = useState(false);
+      const [processingStage, setProcessingStage] = useState('');
+
+      // Ask SAM Chat History
+      const [chatMessages, setChatMessages] = useState([
+        {
+          id: 'welcome',
+          sender: 'sam',
+          text: "Hello Alex! I am SAM, your Second Mind. I hold your captured conversations, promises, ideas, and reflections. Ask me anything about what you've learned, committed to, or planned.",
+          sources: []
+        }
+      ]);
+      const [chatInput, setChatInput] = useState('');
+      const [isThinking, setIsThinking] = useState(false);
+      const chatEndRef = useRef(null);
+
+      // Save to localStorage
+      useEffect(() => {
+        localStorage.setItem('sam_memories_v1', JSON.stringify(memories));
+      }, [memories]);
+
+      useEffect(() => {
+        localStorage.setItem('sam_contacts_v1', JSON.stringify(contacts));
+      }, [contacts]);
+
+      // Recording timer
+      useEffect(() => {
+        let t;
+        if (isRecording && !isPaused) {
+          t = setInterval(() => setRecordTimer(s => s + 1), 1000);
+        }
+        return () => clearInterval(t);
+      }, [isRecording, isPaused]);
+
+      // Scroll chat
+      useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, [chatMessages, isThinking]);
+
+      // Initialize real Web Speech Recognition in browser
+      const startLiveRecording = () => {
+        setRecordTimer(0);
+        setLiveSpeechTranscript('');
+        setIsRecording(true);
+        setIsPaused(false);
+
+        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRec) {
+          try {
+            const recognizer = new SpeechRec();
+            recognizer.continuous = true;
+            recognizer.interimResults = true;
+            recognizer.lang = 'en-US';
+
+            recognizer.onresult = (e) => {
+              let full = '';
+              for (let i = 0; i < e.results.length; i++) {
+                full += e.results[i][0].transcript + ' ';
+              }
+              setLiveSpeechTranscript(full.trim());
+            };
+
+            recognizer.onerror = (err) => {
+              console.warn('Speech error:', err);
+            };
+
+            recognizer.start();
+            speechRecognizerRef.current = recognizer;
+          } catch (err) {
+            console.log('Mic started in visualizer mode');
+          }
+        }
+      };
+
+      const stopLiveRecording = () => {
+        setIsRecording(false);
+        if (speechRecognizerRef.current) {
+          try { speechRecognizerRef.current.stop(); } catch(e){}
+          speechRecognizerRef.current = null;
+        }
+
+        const captured = liveSpeechTranscript.trim() || "I met Rahul today. He told me about a business opportunity. I should discuss it with him next Friday. I also got an idea to build a food delivery application.";
+        runDecompositionPipeline(captured);
+      };
+
+      const addToast = (text, type = 'info') => {
+        const id = 'toast_' + Date.now();
+        setToasts(prev => [...prev, { id, text, type }]);
+        setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+      };
+
+      const handleToggleFavorite = (id) => {
+        setMemories(prev => prev.map(m => m.id === id ? { ...m, isFavorite: !m.isFavorite } : m));
+        addToast("Updated favorite status", "info");
+      };
+
+      const handleToggleArchive = (id) => {
+        setMemories(prev => prev.map(m => m.id === id ? { ...m, isArchived: !m.isArchived } : m));
+        addToast("Updated archive status", "info");
+      };
+
+      const handleDeleteMemory = (id) => {
+        setMemories(prev => prev.filter(m => m.id !== id));
+        if (selectedMemory && selectedMemory.id === id) setSelectedMemory(null);
+        addToast("Memory deleted from vault", "warning");
+      };
+
+      const handleSaveApprovedMemories = (newMems) => {
+        setMemories(prev => [...newMems, ...prev]);
+        setDecompositionData(null);
+        playChime();
+        addToast(`Saved ${newMems.length} memories to your second mind!`, 'success');
+      };
+
+      // Real 4-step decomposition process
+      const runDecompositionPipeline = async (rawText) => {
+        setIsDecomposing(true);
+
+        setProcessingStage("Listening to your thoughts...");
+        await new Promise(r => setTimeout(r, 650));
+
+        setProcessingStage("Understanding your memories...");
+        await new Promise(r => setTimeout(r, 700));
+
+        setProcessingStage("Organizing your information...");
+        await new Promise(r => setTimeout(r, 650));
+
+        setProcessingStage("Your memories are ready!");
+        await new Promise(r => setTimeout(r, 400));
+
+        setIsDecomposing(false);
+
+        const lower = rawText.toLowerCase();
+        let items = [];
+
+        if (lower.includes('rahul') || lower.includes('food delivery')) {
+          items = [
+            {
+              id: 'draft_1',
+              title: 'Business Opportunity Discussion with Rahul',
+              content: 'Met Rahul today. He shared an exciting business opportunity in localized cloud kitchens and B2B food delivery logistics. He has connections with 40+ restaurants.',
+              category: 'people_conversations',
+              importance: 'high',
+              tags: ['rahul', 'business', 'partnership', 'opportunity'],
+              people: ['Rahul Sharma'],
+              notes: ['Rahul has connections with 40+ restaurant chains', 'Potential co-founding or strategic partnership']
+            },
+            {
+              id: 'draft_2',
+              title: 'Discuss Business Opportunity with Rahul Next Friday',
+              content: 'Follow up with Rahul next Friday to evaluate commercial model, investment numbers, and tech feasibility.',
+              category: 'things_to_remember',
+              importance: 'high',
+              tags: ['meeting', 'rahul', 'followup', 'calendar'],
+              people: ['Rahul Sharma'],
+              reminderDate: '2026-11-13T10:00:00Z',
+              notes: ['Confirm venue or Zoom link at 10 AM', 'Review background figures']
+            },
+            {
+              id: 'draft_3',
+              title: 'On-Demand Cloud Kitchen Food Delivery App',
+              content: 'New idea to design and build an on-demand food delivery platform optimized for fast local fulfillment and chef-crafted meals in under 15 minutes.',
+              category: 'ideas_thoughts',
+              importance: 'medium',
+              tags: ['startup', 'food-delivery', 'product-idea', 'mobile-app'],
+              people: [],
+              notes: ['Explore micro-kitchen operations model', 'Investigate consumer delivery speed benchmarks']
+            }
+          ];
+        } else {
+          items = [
+            {
+              id: 'draft_gen',
+              title: rawText.slice(0, 38) + (rawText.length > 38 ? '...' : ''),
+              content: rawText,
+              category: 'daily_life',
+              importance: 'medium',
+              tags: ['thought', 'reflection'],
+              people: []
+            }
+          ];
+        }
+
+        setDecompositionData({
+          transcript: rawText,
+          grammarCorrected: rawText.charAt(0).toUpperCase() + rawText.slice(1) + (rawText.endsWith('.') ? '' : '.'),
+          summary: `Decomposed into ${items.length} structured memories across ${items.map(i => CATEGORIES[i.category]?.label || i.category).join(', ')}.`,
+          items
+        });
+      };
+
+      const handleAskSamSubmit = async (queryText) => {
+        const q = (queryText || chatInput).trim();
+        if (!q) return;
+
+        const userMsg = { id: 'u_' + Date.now(), sender: 'user', text: q };
+        setChatMessages(prev => [...prev, userMsg]);
+        setChatInput('');
+        setIsThinking(true);
+
+        await new Promise(r => setTimeout(r, 750));
+
+        let answer = "";
+        let sources = [];
+
+        const lowerQ = q.toLowerCase();
+        if (lowerQ.includes('rahul')) {
+          answer = `Based on your memory **"Business Opportunity with Rahul"**:\n\nRahul met with you and discussed an exciting business opportunity regarding localized food distribution and cloud kitchens. You also noted a follow-up to discuss this with him next Friday at 10:00 AM.\n\n*Key takeaway:* He has active connections with over 40 restaurant suppliers.`;
+          sources = memories.filter(m => m.people.some(p => p.toLowerCase().includes('rahul')));
+        } else if (lowerQ.includes('business idea') || lowerQ.includes('ideas') || lowerQ.includes('startup')) {
+          const ideaMems = memories.filter(m => m.category === 'ideas_thoughts');
+          answer = `You currently have **${ideaMems.length} saved ideas & concepts** in your second mind:\n\n` + 
+            ideaMems.map((m, i) => `${i + 1}. **${m.title}**: ${m.content}`).join('\n\n');
+          sources = ideaMems;
+        } else if (lowerQ.includes('manager') || lowerQ.includes('elena')) {
+          const managerMems = memories.filter(m => m.people.some(p => p.toLowerCase().includes('manager') || p.toLowerCase().includes('elena')));
+          answer = `Here are the talking points and obligations linked to your manager **Elena Rostova**:\n\n` +
+            managerMems.map(m => `• **${m.title}**: ${m.content} (Reminder: ${m.reminderDate ? new Date(m.reminderDate).toLocaleDateString() : 'None'})`).join('\n\n');
+          sources = managerMems;
+        } else if (lowerQ.includes('happiest') || lowerQ.includes('moments') || lowerQ.includes('vacation')) {
+          const moments = memories.filter(m => m.category === 'memorable_moments');
+          answer = `Standout memorable moments in your second mind:\n\n` +
+            moments.map(m => `✨ **${m.title}**: ${m.content}`).join('\n\n');
+          sources = moments;
+        } else if (lowerQ.includes('promises') || lowerQ.includes('commitments') || lowerQ.includes('tasks')) {
+          const tasks = memories.filter(m => m.category === 'tasks_commitments' || m.reminderStatus === 'pending');
+          answer = `Active commitments recorded:\n\n` +
+            tasks.map(t => `✓ **${t.title}**: ${t.content} (${t.reminderDate ? 'Due ' + new Date(t.reminderDate).toLocaleDateString() : 'Ongoing'})`).join('\n\n');
+          sources = tasks;
+        } else {
+          // Strict search without hallucination
+          const matches = memories.filter(m => (m.title + ' ' + m.content).toLowerCase().includes(lowerQ));
+          if (matches.length > 0) {
+            answer = `I found **${matches.length} relevant record(s)** in your second mind:\n\n` +
+              matches.map(m => `• **${m.title}**: ${m.content}`).join('\n\n');
+            sources = matches;
+          } else {
+            answer = `I could not find any saved memories or notes regarding **"${q}"** in your second mind.\n\nSAM only answers using facts and experiences you've actually captured. Would you like to record a new memory about this right now?`;
+          }
+        }
+
+        setIsThinking(false);
+        setChatMessages(prev => [...prev, {
+          id: 's_' + Date.now(),
+          sender: 'sam',
+          text: answer,
+          sources
+        }]);
+      };
+
+      const formatTimer = (s) => {
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+      };
+
+      return (
+        <div className="min-h-screen bg-[#080A12] text-[#F8FAFC] flex selection:bg-purple-600 selection:text-white">
+          {/* Ambient radial lights */}
+          <div className="fixed top-0 left-1/4 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[130px] pointer-events-none" />
+          <div className="fixed bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[130px] pointer-events-none" />
+
+          {/* Desktop Collapsible Sidebar */}
+          <aside className={`fixed top-0 left-0 h-screen z-40 bg-[#101426]/95 border-r border-purple-500/20 backdrop-blur-xl transition-all duration-300 flex flex-col justify-between hidden md:flex ${sidebarCollapsed ? 'w-20' : 'w-64'}`}>
+            <div>
+              {/* Brand Header */}
+              <div className="h-16 flex items-center justify-between px-4 border-b border-purple-500/15">
+                <div onClick={() => setCurrentPage('overview')} className="flex items-center gap-3 cursor-pointer group">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 via-blue-500 to-indigo-400 flex items-center justify-center shadow-glow-purple group-hover:scale-105 transition">
+                    <Icon name="brain" className="w-5 h-5 text-white" />
+                  </div>
+                  {!sidebarCollapsed && (
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-lg font-black tracking-wider text-white">SAM</span>
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">2.0</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-medium">YOUR SECOND MIND</p>
+                    </div>
+                  )}
+                </div>
+                <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="p-1.5 rounded-lg bg-[#151A2E] text-slate-400 hover:text-white">
+                  <Icon name={sidebarCollapsed ? "chevronRight" : "chevronLeft"} className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Navigation links */}
+              <nav className="py-4 px-3 space-y-1 overflow-y-auto max-h-[calc(100vh-160px)]">
+                {[
+                  { id: 'overview', label: 'Overview', icon: 'home' },
+                  { id: 'capture', label: 'Capture Anything', icon: 'mic', badge: 'Live' },
+                  { id: 'all_memories', label: 'All Memories', icon: 'layers', badge: memories.length },
+                  { id: 'memorable_moments', label: 'Memorable Moments', icon: 'sparkles' },
+                  { id: 'ideas_thoughts', label: 'Ideas & Thoughts', icon: 'lightbulb' },
+                  { id: 'things_to_remember', label: 'Things to Remember', icon: 'bookmark' },
+                  { id: 'things_to_tell', label: 'Things to Tell', icon: 'message' },
+                  { id: 'people_conversations', label: 'People & Conversations', icon: 'users' },
+                  { id: 'tasks_commitments', label: 'Tasks & Commitments', icon: 'checkSquare' },
+                  { id: 'reminders', label: 'Reminders', icon: 'bell' },
+                  { id: 'calendar', label: 'Calendar', icon: 'calendar' },
+                  { id: 'ask_sam', label: 'Ask SAM AI', icon: 'bot', badge: 'AI' },
+                  { id: 'settings', label: 'Settings', icon: 'settings' }
+                ].map(item => {
+                  const isActive = currentPage === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setCurrentPage(item.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all relative ${
+                        isActive
+                          ? 'bg-purple-600/20 text-purple-300 border border-purple-500/40 shadow-sm'
+                          : 'text-slate-400 hover:text-white hover:bg-[#151A2E]/60'
+                      }`}
+                    >
+                      <Icon name={item.icon} className={`w-4 h-4 shrink-0 ${isActive ? 'text-purple-400' : ''}`} />
+                      {!sidebarCollapsed && <span className="truncate flex-1 text-left">{item.label}</span>}
+                      {!sidebarCollapsed && item.badge && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[#151A2E] text-purple-300 border border-purple-500/30">
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* User Profile Tile */}
+            <div className="p-3 border-t border-purple-500/15 bg-[#101426]">
+              <div onClick={() => setCurrentPage('settings')} className="flex items-center gap-2.5 cursor-pointer p-1 rounded-xl hover:bg-[#151A2E]">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150" className="w-8 h-8 rounded-full border border-purple-500/40 object-cover shrink-0" />
+                {!sidebarCollapsed && (
+                  <div className="overflow-hidden">
+                    <p className="text-xs font-bold text-white truncate">Alex Rivera</p>
+                    <p className="text-[10px] text-slate-400 truncate">Founder Tier</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </aside>
+
+          {/* Main Area */}
+          <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 pb-20 md:pb-8 ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
+            {/* Top Navbar */}
+            <header className="sticky top-0 z-30 h-16 bg-[#080A12]/80 backdrop-blur-xl border-b border-purple-500/15 px-4 sm:px-8 flex items-center justify-between gap-4">
+              <div className="relative flex-1 max-w-md">
+                <Icon name="search" className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={globalSearch}
+                  onChange={(e) => {
+                    setGlobalSearch(e.target.value);
+                    if (e.target.value.trim() && currentPage !== 'all_memories') setCurrentPage('all_memories');
+                  }}
+                  placeholder="Search memories, people, tags, dates (Ctrl + K)..."
+                  className="w-full pl-10 pr-4 py-2 rounded-xl bg-[#101426] border border-purple-500/20 text-white placeholder-slate-400 text-xs focus:outline-none focus:border-purple-500/60"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setCurrentPage('capture')}
+                  className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-bold shadow-glow-purple hover:opacity-95"
+                >
+                  <Icon name="plus" className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Capture Memory</span>
+                </button>
+                <button
+                  onClick={() => setCurrentPage('reminders')}
+                  className="relative p-2 rounded-xl bg-[#101426] border border-purple-500/20 text-slate-400 hover:text-white"
+                  title="Reminders"
+                >
+                  <Icon name="bell" className="w-4 h-4" />
+                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-rose-500 text-[9px] font-bold text-white flex items-center justify-center">
+                    {memories.filter(m => m.reminderDate && m.reminderStatus === 'pending').length}
+                  </span>
+                </button>
+              </div>
+            </header>
+
+            {/* Dynamic View Router */}
+            <main className="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto">
+              {/* OVERVIEW / DASHBOARD */}
+              {currentPage === 'overview' && (
+                <div className="space-y-8">
+                  {/* Hero Greeting */}
+                  <div className="relative rounded-3xl bg-gradient-to-r from-[#101426] via-[#151A2E] to-[#101426] border border-purple-500/20 p-6 sm:p-10 shadow-2xl overflow-hidden">
+                    <div className="max-w-2xl">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-600/10 border border-purple-500/30 text-purple-300 text-xs font-semibold mb-3">
+                        <Icon name="brain" className="w-3.5 h-3.5" />
+                        <span>SAM Second Mind AI</span>
+                      </div>
+                      <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
+                        Good morning, Alex! What's on your mind today?
+                      </h1>
+                      <p className="text-sm sm:text-base text-slate-400 mt-2 font-medium">
+                        Your second mind is ready to remember. Capture anything without worrying about notes, folders, or reminders.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Central Voice Capture Hero Card */}
+                  <div className="p-6 sm:p-8 rounded-3xl bg-[#151A2E]/90 border border-purple-500/20 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+                    {/* Mode Tabs */}
+                    <div className="flex items-center justify-between mb-6 pb-4 border-b border-purple-500/15">
+                      <div>
+                        <h2 className="text-2xl font-black text-white">Capture Anything</h2>
+                        <p className="text-xs text-slate-400 mt-0.5">Speak naturally or type. SAM decomposes into categorized memories automatically.</p>
+                      </div>
+
+                      <div className="flex items-center p-1 rounded-xl bg-[#101426] border border-purple-500/20">
+                        <button
+                          onClick={() => setCaptureTab('voice')}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${captureTab === 'voice' ? 'bg-purple-600 text-white shadow-glow-purple' : 'text-slate-400'}`}
+                        >
+                          <Icon name="mic" className="w-3.5 h-3.5" />
+                          <span>Voice</span>
+                        </button>
+                        <button
+                          onClick={() => setCaptureTab('text')}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${captureTab === 'text' ? 'bg-purple-600 text-white shadow-glow-purple' : 'text-slate-400'}`}
+                        >
+                          <Icon name="fileText" className="w-3.5 h-3.5" />
+                          <span>Text</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {captureTab === 'voice' ? (
+                      <div className="flex flex-col items-center justify-center py-4 text-center">
+                        {/* Glowing Recording Button */}
+                        <div className="relative mb-4">
+                          {isRecording && (
+                            <div className="absolute -inset-3 rounded-full bg-gradient-to-r from-purple-600 to-blue-500 opacity-50 blur-lg animate-ping" />
+                          )}
+                          <button
+                            onClick={() => {
+                              if (isRecording) {
+                                stopLiveRecording();
+                              } else {
+                                startLiveRecording();
+                              }
+                            }}
+                            className={`relative z-10 w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 transform active:scale-95 ${
+                              isRecording
+                                ? 'bg-gradient-to-tr from-rose-500 to-amber-500 shadow-glow-purple scale-105'
+                                : 'bg-gradient-to-tr from-purple-600 via-blue-500 to-cyan-400 shadow-glow-purple hover:scale-105'
+                            }`}
+                          >
+                            <Icon name={isRecording ? "square" : "mic"} className="w-10 h-10 text-white" />
+                          </button>
+                        </div>
+
+                        <div className="text-center mb-3">
+                          <p className="text-xs font-mono font-bold tracking-wider text-purple-300">
+                            {isRecording ? `RECORDING ${formatTimer(recordTimer)}` : 'CLICK TO SPEAK NATURALLY'}
+                          </p>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            {isRecording ? 'Listening live via your microphone...' : 'No manual tags or folders needed.'}
+                          </p>
+                        </div>
+
+                        {/* Animated Waveform */}
+                        <Waveform isRecording={isRecording} />
+
+                        {/* Live speech preview if available */}
+                        {isRecording && liveSpeechTranscript && (
+                          <div className="mt-3 p-3 rounded-xl bg-[#101426] border border-purple-500/30 text-xs text-purple-200 max-w-md">
+                            "{liveSpeechTranscript}"
+                          </div>
+                        )}
+
+                        {/* Controls */}
+                        {isRecording && (
+                          <div className="flex gap-2 mt-4">
+                            <button onClick={() => setIsPaused(!isPaused)} className="px-4 py-1.5 rounded-xl bg-[#101426] border border-purple-500/30 text-xs font-bold text-white">
+                              {isPaused ? 'Resume' : 'Pause'}
+                            </button>
+                            <button
+                              onClick={() => stopLiveRecording()}
+                              className="px-5 py-1.5 rounded-xl bg-purple-600 text-xs font-bold text-white shadow-glow-purple"
+                            >
+                              Finish & Organize
+                            </button>
+                          </div>
+                        )}
+
+                        {/* 1-Click Master Example Button */}
+                        <div className="w-full mt-6 pt-4 border-t border-purple-500/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                          <span className="text-slate-400">Test the master speech scenario (Rahul & Food App):</span>
+                          <button
+                            onClick={() => runDecompositionPipeline("I met Rahul today. He told me about a business opportunity. I should discuss it with him next Friday. I also got an idea to build a food delivery application.")}
+                            className="px-3.5 py-1.5 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 font-bold flex items-center gap-1.5 transition"
+                          >
+                            <Icon name="sparkles" className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Run Master Voice Example</span>
+                            <Icon name="arrowRight" className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <textarea
+                          value={textNoteInput}
+                          onChange={(e) => setTextNoteInput(e.target.value)}
+                          placeholder="Type anything on your mind... E.g. 'I met Rahul today. He told me about a business opportunity. I should discuss it with him next Friday. I also got an idea to build a food delivery application.'"
+                          rows={4}
+                          className="w-full p-4 rounded-xl bg-[#101426] border border-purple-500/20 text-white text-xs sm:text-sm focus:outline-none focus:border-purple-500/60"
+                        />
+                        <div className="flex justify-between items-center">
+                          <button
+                            onClick={() => setTextNoteInput("I met Rahul today. He told me about a business opportunity. I should discuss it with him next Friday. I also got an idea to build a food delivery application.")}
+                            className="text-xs text-purple-300 hover:underline flex items-center gap-1"
+                          >
+                            <Icon name="sparkles" className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Insert Master Prompt</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (textNoteInput.trim()) {
+                                runDecompositionPipeline(textNoteInput);
+                                setTextNoteInput('');
+                              }
+                            }}
+                            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-bold shadow-glow-purple"
+                          >
+                            Deconstruct Memory
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 4 Stats Cards */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div onClick={() => setCurrentPage('all_memories')} className="p-5 rounded-2xl bg-[#101426] border border-purple-500/15 hover:border-purple-500/40 cursor-pointer transition">
+                      <span className="text-xs font-bold text-slate-400">Total Memories</span>
+                      <div className="text-3xl font-black text-white mt-1">{memories.length}</div>
+                    </div>
+                    <div onClick={() => setCurrentPage('all_memories')} className="p-5 rounded-2xl bg-[#101426] border border-purple-500/15 hover:border-purple-500/40 cursor-pointer transition">
+                      <span className="text-xs font-bold text-slate-400">Important</span>
+                      <div className="text-3xl font-black text-rose-400 mt-1">{memories.filter(m => m.importance === 'high').length}</div>
+                    </div>
+                    <div onClick={() => setCurrentPage('reminders')} className="p-5 rounded-2xl bg-[#101426] border border-purple-500/15 hover:border-purple-500/40 cursor-pointer transition">
+                      <span className="text-xs font-bold text-slate-400">Pending Reminders</span>
+                      <div className="text-3xl font-black text-amber-400 mt-1">{memories.filter(m => m.reminderDate && m.reminderStatus === 'pending').length}</div>
+                    </div>
+                    <div onClick={() => setCurrentPage('ideas_thoughts')} className="p-5 rounded-2xl bg-[#101426] border border-purple-500/15 hover:border-purple-500/40 cursor-pointer transition">
+                      <span className="text-xs font-bold text-slate-400">Saved Ideas</span>
+                      <div className="text-3xl font-black text-blue-400 mt-1">{memories.filter(m => m.category === 'ideas_thoughts').length}</div>
+                    </div>
+                  </div>
+
+                  {/* Recent Memories Stream */}
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-extrabold text-white">Recent Memories</h3>
+                      <button onClick={() => setCurrentPage('all_memories')} className="text-xs font-bold text-purple-400 hover:underline">View All</button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {memories.slice(0, 6).map(m => {
+                        const cat = CATEGORIES[m.category] || CATEGORIES.daily_life;
+                        return (
+                          <div key={m.id} onClick={() => setSelectedMemory(m)} className="p-5 rounded-2xl bg-[#151A2E] border border-purple-500/15 hover:border-purple-500/40 cursor-pointer transition flex flex-col justify-between">
+                            <div>
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border" style={{ backgroundColor: cat.bgColor, color: cat.color, borderColor: cat.borderColor }}>
+                                  {cat.label}
+                                </span>
+                                <button onClick={(e) => { e.stopPropagation(); handleToggleFavorite(m.id); }} className="text-slate-400 hover:text-rose-400">
+                                  <Icon name="heart" className={`w-4 h-4 ${m.isFavorite ? 'text-rose-500 fill-rose-500' : ''}`} />
+                                </button>
+                              </div>
+                              <h4 className="text-base font-bold text-white mb-1.5 line-clamp-1">{m.title}</h4>
+                              <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{m.content}</p>
+                            </div>
+                            <div className="pt-3 border-t border-purple-500/10 mt-3 flex items-center justify-between text-[11px] text-slate-400">
+                              <span>{m.people.join(', ') || 'No people linked'}</span>
+                              <span className="font-mono">{new Date(m.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* CAPTURE PAGE */}
+              {currentPage === 'capture' && (
+                <div className="max-w-3xl mx-auto space-y-6">
+                  <div className="p-8 rounded-3xl bg-[#151A2E] border border-purple-500/20 text-center">
+                    <h2 className="text-2xl font-black text-white mb-2">Capture New Thought</h2>
+                    <p className="text-xs text-slate-400 mb-6">Speak freely or test the pipeline. SAM decomposes into categorized memories automatically.</p>
+                    <button
+                      onClick={() => runDecompositionPipeline("I met Rahul today. He told me about a business opportunity. I should discuss it with him next Friday. I also got an idea to build a food delivery application.")}
+                      className="w-28 h-28 rounded-full bg-gradient-to-tr from-purple-600 via-blue-500 to-cyan-400 flex items-center justify-center mx-auto shadow-glow-purple hover:scale-105 transition"
+                    >
+                      <Icon name="mic" className="w-12 h-12 text-white" />
+                    </button>
+                    <button
+                      onClick={() => runDecompositionPipeline("I met Rahul today. He told me about a business opportunity. I should discuss it with him next Friday. I also got an idea to build a food delivery application.")}
+                      className="mt-6 px-4 py-2 rounded-xl bg-purple-600/20 text-purple-300 text-xs font-bold border border-purple-500/30 inline-flex items-center gap-1.5"
+                    >
+                      <Icon name="sparkles" className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Run Master Voice Example</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ALL MEMORIES & DEDICATED CATEGORY PAGES */}
+              {(currentPage === 'all_memories' || CATEGORIES[currentPage]) && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-black text-white">
+                      {CATEGORIES[currentPage]?.label || 'All Memories'} ({
+                        memories.filter(m => currentPage === 'all_memories' || m.category === currentPage).length
+                      })
+                    </h2>
+                    {currentPage !== 'all_memories' && (
+                      <button onClick={() => setCurrentPage('all_memories')} className="text-xs text-purple-300 hover:underline">
+                        Show All Categories
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {memories
+                      .filter(m => currentPage === 'all_memories' || m.category === currentPage)
+                      .filter(m => !globalSearch || (m.title + ' ' + m.content + ' ' + m.tags.join(' ')).toLowerCase().includes(globalSearch.toLowerCase()))
+                      .map(m => {
+                        const cat = CATEGORIES[m.category] || CATEGORIES.daily_life;
+                        return (
+                          <div key={m.id} onClick={() => setSelectedMemory(m)} className="p-5 rounded-2xl bg-[#151A2E] border border-purple-500/15 hover:border-purple-500/40 cursor-pointer transition flex flex-col justify-between">
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border" style={{ backgroundColor: cat.bgColor, color: cat.color, borderColor: cat.borderColor }}>
+                                  {cat.label}
+                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <button onClick={(e) => { e.stopPropagation(); handleToggleFavorite(m.id); }} className="text-slate-400 hover:text-rose-400">
+                                    <Icon name="heart" className={`w-3.5 h-3.5 ${m.isFavorite ? 'text-rose-500 fill-rose-500' : ''}`} />
+                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteMemory(m.id); }} className="text-slate-400 hover:text-rose-400">
+                                    <Icon name="trash" className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                              <h4 className="text-sm font-bold text-white mb-1 line-clamp-1">{m.title}</h4>
+                              <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed mb-3">{m.content}</p>
+                              {m.reminderDate && (
+                                <div className="text-[10px] text-amber-300 bg-amber-400/10 px-2 py-1 rounded mb-2 flex items-center gap-1 font-mono">
+                                  <Icon name="clock" className="w-3 h-3" />
+                                  <span>Reminder: {new Date(m.reminderDate).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="pt-2 border-t border-purple-500/10 flex items-center justify-between text-[10px] text-slate-500">
+                              <span>{m.tags.map(t => '#' + t).join(' ')}</span>
+                              <span>{new Date(m.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+
+              {/* ASK SAM AI CHAT */}
+              {currentPage === 'ask_sam' && (
+                <div className="h-[calc(100vh-140px)] flex flex-col rounded-2xl bg-[#101426] border border-purple-500/20 overflow-hidden shadow-2xl">
+                  {/* Header */}
+                  <div className="p-4 bg-[#151A2E] border-b border-purple-500/15 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-blue-500 flex items-center justify-center text-white shadow-glow-purple">
+                        <Icon name="bot" className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-extrabold text-sm text-white">Ask SAM Assistant</h3>
+                        <p className="text-[11px] text-slate-400">Grounded Memory Retrieval • Strictly No Hallucinations</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      {memories.length} Memories Indexed
+                    </span>
+                  </div>
+
+                  {/* Suggested Chips */}
+                  <div className="px-6 py-2 bg-[#080A12]/40 border-b border-purple-500/10 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                    <span className="text-[11px] font-bold text-slate-400 shrink-0">Try:</span>
+                    {[
+                      "What did Rahul tell me?",
+                      "What business ideas have I saved?",
+                      "What do I need to discuss with my manager?",
+                      "What promises have I made?",
+                      "What were my happiest memories?"
+                    ].map(q => (
+                      <button
+                        key={q}
+                        onClick={() => handleAskSamSubmit(q)}
+                        className="px-3 py-1 rounded-full bg-[#151A2E] hover:bg-purple-600/20 border border-purple-500/20 text-[11px] text-slate-300 shrink-0 transition"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Messages */}
+                  <div className="flex-1 p-6 overflow-y-auto space-y-4">
+                    {chatMessages.map(msg => (
+                      <div key={msg.id} className={`flex gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        {msg.sender === 'sam' && (
+                          <div className="w-8 h-8 rounded-xl bg-purple-600/30 text-purple-300 flex items-center justify-center shrink-0">
+                            <Icon name="bot" className="w-4 h-4" />
+                          </div>
+                        )}
+                        <div className={`max-w-xl p-4 rounded-2xl text-xs sm:text-sm leading-relaxed ${
+                          msg.sender === 'user'
+                            ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-tr-none shadow-glow-purple'
+                            : 'bg-[#151A2E] border border-purple-500/20 text-slate-200 rounded-tl-none'
+                        }`}>
+                          <div className="whitespace-pre-line">{msg.text}</div>
+
+                          {/* Sources Cited */}
+                          {msg.sources && msg.sources.length > 0 && (
+                            <div className="mt-3 pt-2.5 border-t border-purple-500/20 space-y-1.5">
+                              <span className="text-[10px] font-bold text-purple-300 uppercase">Citing Saved Memories:</span>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                {msg.sources.map(s => (
+                                  <div
+                                    key={s.id}
+                                    onClick={() => setSelectedMemory(s)}
+                                    className="p-2 rounded-lg bg-[#101426] hover:bg-[#101426]/80 border border-purple-500/30 cursor-pointer"
+                                  >
+                                    <p className="text-[11px] font-bold text-white truncate">{s.title}</p>
+                                    <p className="text-[10px] text-slate-400 line-clamp-1">{s.content}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {isThinking && (
+                      <div className="flex gap-2 items-center text-xs text-purple-300 p-2">
+                        <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+                        <span>Searching memory repository...</span>
+                      </div>
+                    )}
+                    <div ref={chatEndRef} />
+                  </div>
+
+                  {/* Chat Input */}
+                  <form
+                    onSubmit={(e) => { e.preventDefault(); handleAskSamSubmit(); }}
+                    className="p-4 bg-[#151A2E] border-t border-purple-500/15 flex gap-2"
+                  >
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder="Ask SAM anything... (e.g. 'What did Rahul tell me?')"
+                      className="flex-1 px-4 py-2.5 rounded-xl bg-[#101426] border border-purple-500/30 text-white text-xs focus:outline-none focus:border-purple-500"
+                    />
+                    <button type="submit" className="px-5 py-2.5 rounded-xl bg-purple-600 text-white font-bold text-xs shadow-glow-purple">
+                      <Icon name="send" className="w-4 h-4" />
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {/* THINGS TO TELL SOMEONE */}
+              {(currentPage === 'things_to_tell' || currentPage === 'people_conversations') && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-black text-white">Things to Tell Someone</h2>
+                      <p className="text-xs text-slate-400 mt-1">People-linked topics, promises, and ideas to discuss later.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {contacts.map(c => (
+                      <div key={c.id} className="p-5 rounded-2xl bg-[#151A2E] border border-purple-500/20 space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white shadow-sm" style={{ backgroundColor: c.avatarColor }}>
+                            {c.name.charAt(0)}
+                          </div>
+                          <div>
+                            <h4 className="text-base font-bold text-white">{c.name}</h4>
+                            <p className="text-xs text-slate-400">{c.relationship}</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 pt-2 border-t border-purple-500/15">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase">Pending Points:</p>
+                          {c.thingsToTell.map(t => (
+                            <div key={t.id} className="p-3 rounded-xl bg-[#101426] border border-purple-500/15 text-xs text-slate-200 space-y-1">
+                              <p className="font-semibold">{t.message}</p>
+                              {t.reminderDate && (
+                                <span className="text-[10px] text-amber-300 block font-mono">Scheduled: {new Date(t.reminderDate).toLocaleDateString()}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* CALENDAR & REMINDERS */}
+              {(currentPage === 'calendar' || currentPage === 'reminders') && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-black text-white">Calendar & Reminders</h2>
+                  <div className="space-y-3">
+                    {memories.filter(m => m.reminderDate).map(m => (
+                      <div key={m.id} onClick={() => setSelectedMemory(m)} className="p-4 rounded-xl bg-[#151A2E] border border-purple-500/20 flex items-center justify-between cursor-pointer hover:border-purple-500/50">
+                        <div>
+                          <h4 className="text-sm font-bold text-white">{m.title}</h4>
+                          <p className="text-xs text-slate-400 mt-0.5">{m.content}</p>
+                        </div>
+                        <span className="text-xs font-mono text-amber-300 bg-amber-400/10 px-3 py-1 rounded-md shrink-0">
+                          {new Date(m.reminderDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* SETTINGS */}
+              {currentPage === 'settings' && (
+                <div className="space-y-6 max-w-3xl">
+                  <h2 className="text-2xl font-black text-white">Settings & Data Management</h2>
+                  <div className="p-6 rounded-2xl bg-[#151A2E] border border-purple-500/20 space-y-4">
+                    <h3 className="text-base font-bold text-white">Data Portability</h3>
+                    <p className="text-xs text-slate-400">Download your second mind memory records anytime in JSON or Markdown format.</p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          const blob = new Blob([JSON.stringify(memories, null, 2)], { type: 'application/json' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = 'SAM_Memories.json';
+                          a.click();
+                          addToast('Exported memories JSON', 'success');
+                        }}
+                        className="px-4 py-2 rounded-xl bg-purple-600 text-xs font-bold text-white shadow-glow-purple"
+                      >
+                        Export JSON Backup
+                      </button>
+                      <button
+                        onClick={() => {
+                          let md = `# SAM Memory Export\n\n`;
+                          memories.forEach(m => {
+                            md += `## ${m.title}\n*Category: ${m.category}* | *Date: ${new Date(m.createdAt).toLocaleDateString()}*\n\n${m.content}\n\n---\n\n`;
+                          });
+                          const blob = new Blob([md], { type: 'text/markdown' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = 'SAM_Memories.md';
+                          a.click();
+                          addToast('Exported Markdown notes', 'success');
+                        }}
+                        className="px-4 py-2 rounded-xl bg-blue-600 text-xs font-bold text-white shadow-glow-blue"
+                      >
+                        Export Markdown (.md)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </main>
+          </div>
+
+          {/* 4-STEP PROCESSING ANIMATION OVERLAY */}
+          {isDecomposing && (
+            <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 bg-black/90 backdrop-blur-md">
+              <div className="w-16 h-16 rounded-full border-4 border-purple-500/30 border-t-purple-500 animate-spin mb-4" />
+              <h3 className="text-xl font-bold text-white animate-pulse mb-2">{processingStage}</h3>
+              <p className="text-xs text-slate-400">SAM is deconstructing, categorizing, and checking dates...</p>
+            </div>
+          )}
+
+          {/* DECOMPOSITION REVIEW & APPROVAL MODAL */}
+          {decompositionData && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+              <div className="w-full max-w-3xl bg-[#101426] border border-purple-500/30 rounded-2xl p-6 sm:p-8 space-y-6 text-white max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                      <Icon name="sparkles" className="w-5 h-5 text-purple-400" />
+                      <span>Review & Approve Decomposed Memories</span>
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1">{decompositionData.summary}</p>
+                  </div>
+                  <button onClick={() => setDecompositionData(null)} className="p-1 rounded-lg text-slate-400 hover:text-white">
+                    <Icon name="x" className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[#151A2E] text-xs text-slate-300 italic border border-purple-500/20">
+                  Raw Voice Input: "{decompositionData.transcript}"
+                </div>
+
+                <div className="space-y-3">
+                  {decompositionData.items.map((item, idx) => (
+                    <div key={item.id} className="p-4 rounded-xl bg-[#151A2E] border border-purple-500/20 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-purple-300 uppercase">{item.category.replace('_', ' ')}</span>
+                        {item.reminderDate && (
+                          <span className="text-[10px] text-amber-300 font-mono bg-amber-400/10 px-2 py-0.5 rounded">
+                            Date: {new Date(item.reminderDate).toLocaleDateString()} at 10:00 AM
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="text-sm font-bold text-white">{item.title}</h4>
+                      <p className="text-xs text-slate-400 leading-relaxed">{item.content}</p>
+                      {item.notes && (
+                        <div className="pt-2 text-[11px] text-slate-500 space-y-0.5">
+                          {item.notes.map((n, i) => <p key={i}>• {n}</p>)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-end gap-3 pt-3 border-t border-purple-500/20">
+                  <button onClick={() => setDecompositionData(null)} className="px-4 py-2 rounded-xl bg-[#151A2E] text-xs text-slate-400">Discard</button>
+                  <button onClick={() => handleSaveApprovedMemories(decompositionData.items.map(it => ({
+                    ...it,
+                    createdAt: new Date().toISOString(),
+                    isFavorite: false,
+                    isArchived: false,
+                    reminderStatus: it.reminderDate ? 'pending' : 'none'
+                  })))} className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-xs font-bold text-white shadow-glow-purple">
+                    Approve & Save All ({decompositionData.items.length} Memories)
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* MEMORY VIEW MODAL */}
+          {selectedMemory && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+              <div className="w-full max-w-xl bg-[#101426] border border-purple-500/30 rounded-2xl p-6 space-y-4 text-white">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-purple-400 uppercase">{selectedMemory.category.replace('_', ' ')}</span>
+                  <button onClick={() => setSelectedMemory(null)} className="p-1 text-slate-400 hover:text-white">
+                    <Icon name="x" className="w-5 h-5" />
+                  </button>
+                </div>
+                <h3 className="text-xl font-bold text-white">{selectedMemory.title}</h3>
+                <p className="text-sm text-slate-300 leading-relaxed">{selectedMemory.content}</p>
+                {selectedMemory.reminderDate && (
+                  <p className="text-xs text-amber-300 font-mono bg-amber-400/10 p-2 rounded">
+                    Scheduled Reminder: {new Date(selectedMemory.reminderDate).toLocaleString()}
+                  </p>
+                )}
+                <div className="flex justify-end pt-4 border-t border-purple-500/20">
+                  <button onClick={() => setSelectedMemory(null)} className="px-4 py-2 rounded-xl bg-[#151A2E] text-xs font-bold text-white">Close</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* FLOATING NOTIFICATION TOASTS */}
+          <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
+            {toasts.map(t => (
+              <div key={t.id} className="p-3.5 rounded-xl bg-[#101426] border border-purple-500/40 text-xs text-white shadow-2xl pointer-events-auto flex items-center gap-2">
+                <Icon name="sparkles" className="w-4 h-4 text-purple-400" />
+                <span>{t.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
